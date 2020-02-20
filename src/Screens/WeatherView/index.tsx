@@ -43,7 +43,7 @@ const Temperature = Styled.Text`
 
 interface Props {}
 
-const API_KEY = '';
+const API_KEY = '9b7d4baf861588fb4507d8f783c70043';
 
 interface IWeather {
   temperature?: number;
@@ -63,14 +63,27 @@ const WeatherView = ({}: Props) => {
     });
     Geolocation.getCurrentPosition(
       position => {
-        const {lotitude, longitude} = position.coords;
+        const {latitude, longitude} = position.coords;
+        fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&APPID=${API_KEY}&units=metric`)
+        .then(res => res.json())
+        .then(json => {
+          setWeatherInfo({
+            temperature: json.main.temp,
+            weather: json.weather[0].main,
+            isLoading: true,
+          });
+        })
+        .catch(() => {
+          setWeatherInfo({isLoading: true});
+          showError('날씨 정보를 가져오는데 실패하였다.');
+        });
       },
       error => {
         setWeatherInfo({
           isLoading: true,
         });
         showError('위치 정보를 가져오는데 실패하였다.');
-      }
+      },
     );
   };
 
@@ -79,6 +92,11 @@ const WeatherView = ({}: Props) => {
       Alert.alert(message);
     }, 500);
   };
+
+  useEffect(() => {
+    getCurrentWeather();
+  },[]);
+
   let data = [];
   const {isLoading, weather, temperature} = weatherInfo;
   if (weather && temperature) {
@@ -87,12 +105,25 @@ const WeatherView = ({}: Props) => {
   return (
     <Container>
       <WeatherContainer
-        onRefresh={() => getCurrentPosition()}
+        onRefresh={() => getCurrentWeather()}
         refreshing={!isLoading}
         data={data}
         keyExtractor={(item, index) => {
           return `Weathe-${index}`;
         }}
+        ListEmptyComponent={
+          <LoadingView>
+            <Loading size="large" color="#1976D2" />
+            <LoadingLabel>Loading...</LoadingLabel>
+          </LoadingView>
+        }
+        renderItem={({item,index}) => (
+          <WeatherItemContainer>
+            <Weather>{(item as IWeather).weather}</Weather>
+            <Temperature>({(item as IWeather).temperature}'C)</Temperature>
+          </WeatherItemContainer>
+        )}
+        contentContainerStyle={{ flex: 1 }}
       />
     </Container>
   );
